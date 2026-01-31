@@ -38,18 +38,20 @@
         </a>
     </div>
     <script>
-    // Force links to stay in PWA mode
+    // FIX: Force all links to stay in "App Mode" on iPhone
     if (window.navigator.standalone) {
         document.addEventListener('click', function(e) {
             var target = e.target;
+            // Find the link that was clicked (even if you clicked an icon inside the link)
             while (target.nodeName !== 'A' && target.nodeName !== 'HTML') {
                 target = target.parentNode;
             }
+            // If it is a link to your own site, handle it manually
             if ('href' in target && target.href.indexOf(location.host) !== -1) {
                 e.preventDefault();
                 window.location = target.href;
             }
-        },false);
+        }, false);
     }
 </script>
 </body>
