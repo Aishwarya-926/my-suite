@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus | Personal Task Manager</title>
+    
+    <!-- Import Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Theme Variables */
+            --primary: #8b5cf6; 
+            --primary-light: #ddd6fe;
+            --bg-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            --glass: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            margin: 0;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+        }
+
+        /* --- Header --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 25px;
+            padding: 0 10px;
+        }
+
+        .greeting-box h1 { margin: 0; font-size: 1.8rem; font-weight: 600; }
+        .greeting-box p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem; }
+        .settings-btn { background: none; border: none; cursor: pointer; font-size: 1.4rem; color: var(--text-muted); transition: 0.3s; }
+        .settings-btn:hover { color: var(--primary); transform: rotate(45deg); }
+
+        /* --- View Controls --- */
+        .view-controls {
+            display: flex;
+            background: rgba(0,0,0,0.05);
+            padding: 5px;
+            border-radius: 50px;
+            margin-bottom: 25px;
+        }
+
+        .view-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 40px;
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .view-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+        /* --- Advanced Input Form --- */
+        .input-group {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            border: 1px solid white;
+            transition: 0.3s;
+        }
+
+        .input-row-main { display: flex; gap: 10px; margin-bottom: 10px; }
+
+        input, textarea {
+            border: none;
+            background: #f3f4f6;
+            padding: 12px 15px;
+            border-radius: 12px;
+            font-family: inherit;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+            transition: 0.2s;
+        }
+        input:focus, textarea:focus { background: #fff; box-shadow: 0 0 0 2px var(--primary-light); }
+
+        #taskInput { flex: 2; font-weight: 500; }
+        #projectInput { flex: 1; min-width: 80px; }
+
+        /* Expanded Details Area */
+        .details-area {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            animation: slideDown 0.3s ease;
+        }
+        
+        .details-row { display: flex; gap: 10px; }
+        #dateInput { flex: 1; color: var(--text-muted); }
+        #notesInput { resize: none; height: 60px; }
+
+        /* Buttons */
+        .form-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        
+        .toggle-details-btn {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;
+        }
+        .toggle-details-btn:hover { color: var(--primary); }
+
+        .add-btn {
+            background: var(--primary); color: white; border: none;
+            padding: 10px 25px; border-radius: 10px; cursor: pointer;
+            font-weight: 600; transition: 0.3s;
+        }
+        .add-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        /* --- Task List --- */
+        .project-group-title {
+            font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--text-muted); margin: 25px 0 10px 5px; font-weight: 600;
+        }
+
+        .task-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 16px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .task-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); background: white; }
+        .task-card.completed { opacity: 0.6; }
+        .task-card.completed .task-text { text-decoration: line-through; color: var(--text-muted); }
+
+        .card-header { display: flex; align-items: flex-start; gap: 12px; }
+        
+        .task-content { flex-grow: 1; }
+        .task-text { font-size: 1.05rem; line-height: 1.4; }
+        
+        .task-meta {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; align-items: center;
+        }
+
+        .badge {
+            font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;
+            display: inline-flex; align-items: center; gap: 4px; font-weight: 500;
+        }
+        .badge-project { background: var(--primary-light); color: var(--primary); }
+        .badge-date { background: #e5e7eb; color: var(--text-muted); }
+        .badge-date.overdue { background: #fee2e2; color: var(--danger); }
+
+        /* Notes Display */
+        .notes-display {
+            margin-top: 10px; padding: 10px; background: #f9fafb;
+            border-radius: 8px; font-size: 0.9rem; color: var(--text-muted);
+            border-left: 3px solid var(--primary-light);
+            display: none; /* Hidden initially */
+            white-space: pre-wrap;
+        }
+
+        .expand-btn {
+            background: none; border: none; cursor: pointer; color: var(--text-muted);
+            padding: 5px; transition: 0.2s;
+        }
+        .expand-btn:hover { color: var(--primary); background: #f3f4f6; border-radius: 50%; }
+
+        /* Custom Checkbox */
+        .check-container {
+            display: block; position: relative; padding-left: 30px; cursor: pointer; user-select: none; margin-top: 2px;
+        }
+        .check-container input { display: none; }
+        .checkmark {
+            position: absolute; top: 0; left: 0; height: 22px; width: 22px;
+            background-color: #eee; border-radius: 6px; transition: 0.2s;
+        }
+        .check-container input:checked ~ .checkmark { background-color: var(--primary); }
+        .checkmark:after {
+            content: ""; position: absolute; display: none; left: 8px; top: 4px; width: 4px; height: 10px;
+            border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg);
+        }
+        .check-container input:checked ~ .checkmark:after { display: block; }
+
+        .delete-btn {
+            background: transparent; border: none; color: #d1d5db; cursor: pointer;
+            font-size: 1.2rem; margin-left: auto; transition: 0.2s; padding: 0 0 0 10px;
+        }
+        .delete-btn:hover { color: var(--danger); }
+
+        /* --- Settings Modal --- */
+        #settingsModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(3px);
+        }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; }
+        .color-dot { width: 30px; height: 30px; border-radius: 50%; display:inline-block; margin: 0 5px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .save-pref-btn { background: var(--text); color: white; padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; width: 100%; margin-top: 20px; }
+
+        @keyframes slideDown { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        .animate-enter { animation: fadeIn 0.4s ease forwards; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="greeting-box">
+                <p id="dateDisplay">Today</p>
+                <h1 id="greeting">Hello</h1>
+            </div>
+            <button class="settings-btn" onclick="openSettings()">⚙️</button>
+        </header>
+
+        <!-- View Toggle -->
+        <div class="view-controls">
+            <button class="view-btn active" onclick="setView('list')">All Tasks</button>
+            <button class="view-btn" onclick="setView('project')">Projects</button>
+        </div>
+
+        <!-- NEW: Expanded Form -->
+        <form class="input-group" id="taskForm">
+            <div class="input-row-main">
+                <input type="text" id="taskInput" placeholder="What needs to be done?" required autocomplete="off">
+                <input type="text" id="projectInput" placeholder="Project" list="projectList" autocomplete="off">
+                <datalist id="projectList"></datalist>
+            </div>
+
+            <!-- Hidden Details Area -->
+            <div class="details-area" id="detailsArea">
+                <div class="details-row">
+                    <input type="datetime-local" id="dateInput">
+                </div>
+                <textarea id="notesInput" placeholder="Add details or notes..."></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="toggle-details-btn" onclick="toggleFormDetails()">
+                    <span id="toggleIcon">▼</span> Add Dates & Notes
+                </button>
+                <button type="submit" class="add-btn">Add Task</button>
+            </div>
+        </form>
+
+        <!-- Task List -->
+        <div id="appContainer"></div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal">
+        <div class="modal-content">
+            <h2>Personalize</h2>
+            <p>Your Name</p>
+            <input type="text" id="userNameInput" placeholder="Name" style="text-align:center;">
+            <p>Theme Color</p>
+            <div>
+                <div class="color-dot" style="background:#8b5cf6" onclick="setTheme('#8b5cf6', '#ddd6fe')"></div>
+                <div class="color-dot" style="background:#2563eb" onclick="setTheme('#2563eb', '#dbeafe')"></div>
+                <div class="color-dot" style="background:#059669" onclick="setTheme('#059669', '#d1fae5')"></div>
+                <div class="color-dot" style="background:#db2777" onclick="setTheme('#db2777', '#fce7f3')"></div>
+                <div class="color-dot" style="background:#ea580c" onclick="setTheme('#ea580c', '#ffedd5')"></div>
+            </div>
+            <button class="save-pref-btn" onclick="savePreferences()">Save Changes</button>
+        </div>
+    </div>
+
+<script>
+    // --- State Management ---
+    let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
+    let prefs = JSON.parse(localStorage.getItem('myPrefs')) || { name: 'Friend', primary: '#8b5cf6', light: '#ddd6fe' };
+    let currentView = 'list';
+    let isDetailsOpen = false;
+
+    // --- DOM Elements ---
+    const appContainer = document.getElementById('appContainer');
+    const projectListOptions = document.getElementById('projectList');
+    const buttons = document.querySelectorAll('.view-btn');
+    const detailsArea = document.getElementById('detailsArea');
+
+    // --- Init ---
+    function init() {
+        applyTheme(prefs.primary, prefs.light);
+        updateDate();
+        updateGreeting();
+        if(prefs.name === 'Friend' && tasks.length === 0) openSettings();
+        updateProjectSuggestions();
+        render();
+    }
+
+    // --- UI Logic ---
+    function updateDate() {
+        const options = { weekday: 'long', month: 'short', day: 'numeric' };
+        document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US', options);
+    }
+
+    function updateGreeting() {
+        const hour = new Date().getHours();
+        const text = hour < 12 ? "Good Morning" : (hour < 18 ? "Good Afternoon" : "Good Evening");
+        document.getElementById('greeting').innerHTML = `${text}, <span style="color:var(--primary)">${prefs.name}</span>`;
+    }
+
+    function toggleFormDetails() {
+        isDetailsOpen = !isDetailsOpen;
+        detailsArea.style.display = isDetailsOpen ? 'flex' : 'none';
+        document.getElementById('toggleIcon').textContent = isDetailsOpen ? '▲' : '▼';
+    }
+
+    function openSettings() {
+        document.getElementById('settingsModal').style.display = 'flex';
+        document.getElementById('userNameInput').value = prefs.name;
+    }
+
+    function savePreferences() {
+        prefs.name = document.getElementById('userNameInput').value.trim() || 'Friend';
+        localStorage.setItem('myPrefs', JSON.stringify(prefs));
+        updateGreeting();
+        document.getElementById('settingsModal').style.display = 'none';
+    }
+
+    function setTheme(p, l) {
+        prefs.primary = p; prefs.light = l;
+        applyTheme(p, l);
+    }
+
+    function applyTheme(p, l) {
+        document.documentElement.style.setProperty('--primary', p);
+        document.documentElement.style.setProperty('--primary-light', l);
+    }
+
+    // --- Task Logic ---
+    function saveData() {
+        localStorage.setItem('myTasks', JSON.stringify(tasks));
+        updateProjectSuggestions();
+        render();
+    }
+
+    function updateProjectSuggestions() {
+        const projects = [...new Set(tasks.map(t => t.project))];
+        projectListOptions.innerHTML = projects.map(p => `<option value="${p}">`).join('');
+    }
+
+    // Add Task
+    document.getElementById('taskForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = document.getElementById('taskInput').value.trim();
+        const project = document.getElementById('projectInput').value.trim() || 'General';
+        const date = document.getElementById('dateInput').value;
+        const notes = document.getElementById('notesInput').value.trim();
+
+        if (text) {
+            tasks.push({
+                id: Date.now(),
+                text, project, date, notes,
+                completed: false
+            });
+            saveData();
+            
+            // Reset form
+            document.getElementById('taskInput').value = '';
+            document.getElementById('dateInput').value = '';
+            document.getElementById('notesInput').value = '';
+            
+            // Close details if open
+            if(isDetailsOpen) toggleFormDetails();
+        }
+    });
+
+    window.toggleTask = (id) => {
+        tasks = tasks.map(t => t.id === id ? {...t, completed: !t.completed} : t);
+        saveData();
+    };
+
+    window.deleteTask = (id) => {
+        if(confirm("Delete this task?")) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveData();
+        }
+    };
+
+    window.toggleNotes = (id) => {
+        const el = document.getElementById(`notes-${id}`);
+        const btn = document.getElementById(`btn-note-${id}`);
+        if(el.style.display === 'block') {
+            el.style.display = 'none';
+            btn.style.transform = 'rotate(0deg)';
+        } else {
+            el.style.display = 'block';
+            btn.style.transform = 'rotate(180deg)';
+        }
+    };
+
+    window.setView = (view) => {
+        currentView = view;
+        buttons.forEach(btn => btn.classList.remove('active'));
+        if (view === 'list') buttons[0].classList.add('active');
+        else buttons[1].classList.add('active');
+        render();
+    };
+
+    // --- Rendering Helpers ---
+    function formatDueDate(dateString) {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        const now = new Date();
+        
+        const isOverdue = date < now;
+        
+        // Format: "Oct 24, 2:30 PM"
+        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
+                          ', ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                          
+        return { text: formatted, isOverdue: isOverdue };
+    }
+
+    function createCardHTML(task) {
+        const dateObj = formatDueDate(task.date);
+        const hasNotes = task.notes && task.notes.length > 0;
+        
+        let dateBadge = '';
+        if(dateObj) {
+            const overdueClass = (dateObj.isOverdue && !task.completed) ? 'overdue' : '';
+            // 📅 Icon + Date
+            dateBadge = `<div class="badge badge-date ${overdueClass}">📅 ${dateObj.text}</div>`;
+        }
+
+        return `
+            <div class="task-card ${task.completed ? 'completed' : ''} animate-enter">
+                <div class="card-header">
+                    <label class="check-container">
+                        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                        <span class="checkmark"></span>
+                    </label>
+                    
+                    <div class="task-content">
+                        <div class="task-text">${task.text}</div>
+                        
+                        <div class="task-meta">
+                            ${currentView === 'list' ? `<div class="badge badge-project">${task.project}</div>` : ''}
+                            ${dateBadge}
+                        </div>
+
+                        ${hasNotes ? `<div class="notes-display" id="notes-${task.id}">${task.notes}</div>` : ''}
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                        <button class="delete-btn" onclick="deleteTask(${task.id})">&times;</button>
+                        ${hasNotes ? `<button class="expand-btn" id="btn-note-${task.id}" onclick="toggleNotes(${task.id})" title="Show Notes">▼</button>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function render() {
+        appContainer.innerHTML = '';
+
+        if (tasks.length === 0) {
+            appContainer.innerHTML = `
+                <div style="text-align:center; margin-top:50px; opacity:0.5;">
+                    <div style="font-size:3rem; margin-bottom:10px;">📝</div>
+                    <p>No tasks yet. Add one above!</p>
+                </div>`;
+            return;
+        }
+
+        // Sort: Overdue first, then Pending, then Completed
+        const sortedTasks = [...tasks].sort((a, b) => {
+            if (a.completed !== b.completed) return a.completed - b.completed;
+            // If both pending, sort by date (if exists)
+            if (a.date && b.date) return new Date(a.date) - new Date(b.date);
+            return 0;
+        });
+
+        if (currentView === 'list') {
+            appContainer.innerHTML = sortedTasks.map(createCardHTML).join('');
+        } else {
+            const projects = [...new Set(tasks.map(t => t.project))].sort();
+            projects.forEach(project => {
+                const pTasks = sortedTasks.filter(t => t.project === project);
+                if(pTasks.length > 0) {
+                    appContainer.innerHTML += `
+                        <div class="animate-enter">
+                            <div class="project-group-title">${project} (${pTasks.length})</div>
+                            ${pTasks.map(createCardHTML).join('')}
+                        </div>`;
+                }
+            });
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>
