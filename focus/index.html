@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Flow | Productivity Timer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Focus Mode Colors (Default) */
+            --primary: #f43f5e; /* Rose Red */
+            --bg: #fff1f2;
+            --text: #881337;
+            
+            /* Circle Dimensions */
+            --circle-size: 300px;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+
+        /* --- Header --- */
+        .header {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+        }
+        h1 { margin: 0; font-weight: 700; }
+        p { margin: 5px 0 0 0; opacity: 0.7; }
+
+        /* --- The Timer Circle --- */
+        .timer-container {
+            position: relative;
+            width: var(--circle-size);
+            height: var(--circle-size);
+            margin-bottom: 40px;
+        }
+
+        /* SVG Circle Logic */
+        svg {
+            transform: rotate(-90deg); /* Start at top */
+            width: 100%;
+            height: 100%;
+        }
+
+        circle {
+            fill: none;
+            stroke-width: 15;
+            stroke-linecap: round;
+        }
+
+        .circle-bg { stroke: rgba(0,0,0,0.05); }
+        
+        .circle-progress {
+            stroke: var(--primary);
+            stroke-dasharray: 880; /* Circumference of radius 140 approx */
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
+        }
+
+        /* Time Text inside Circle */
+        .time-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .time-left {
+            font-size: 4.5rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums; /* Prevents jitter */
+            line-height: 1;
+        }
+
+        .current-mode {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 10px;
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        /* --- Controls --- */
+        .controls {
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .btn:active { transform: scale(0.95); }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--text);
+        }
+
+        /* --- Mode Switcher --- */
+        .mode-tabs {
+            background: rgba(255,255,255,0.5);
+            padding: 5px;
+            border-radius: 30px;
+            display: flex;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            padding: 8px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 20px;
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--text);
+            opacity: 0.6;
+            transition: 0.3s;
+        }
+
+        .tab.active {
+            background: white;
+            opacity: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Focus Flow</h1>
+        <p>Stay productive.</p>
+    </div>
+
+    <!-- Mode Toggles -->
+    <div class="mode-tabs">
+        <button class="tab active" onclick="switchMode('focus')">Focus</button>
+        <button class="tab" onclick="switchMode('short')">Short Break</button>
+        <button class="tab" onclick="switchMode('long')">Long Break</button>
+    </div>
+
+    <!-- Timer Ring -->
+    <div class="timer-container">
+        <!-- 
+             Radius = 140
+             Circumference = 2 * PI * 140 ≈ 880
+        -->
+        <svg>
+            <circle class="circle-bg" cx="150" cy="150" r="140"></circle>
+            <circle class="circle-progress" id="progressRing" cx="150" cy="150" r="140"></circle>
+        </svg>
+        
+        <div class="time-display">
+            <div class="time-left" id="timeDisplay">25:00</div>
+            <div class="current-mode" id="modeDisplay">Focus Time</div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="btn btn-secondary" onclick="resetTimer()">Reset</button>
+        <button class="btn btn-primary" id="startBtn" onclick="toggleTimer()">Start</button>
+    </div>
+
+    <!-- Audio Sound -->
+    <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
+<script>
+    // --- Configuration ---
+    const MODES = {
+        focus: { time: 25 * 60, color: '#f43f5e', bg: '#fff1f2', label: 'Focus Time' },
+        short: { time: 5 * 60,  color: '#10b981', bg: '#ecfdf5', label: 'Short Break' }, // Green
+        long:  { time: 15 * 60, color: '#3b82f6', bg: '#eff6ff', label: 'Long Break' }  // Blue
+    };
+
+    // --- State ---
+    let currentMode = 'focus';
+    let timeLeft = MODES.focus.time;
+    let isRunning = false;
+    let timerInterval = null;
+    const CIRCUMFERENCE = 880; // Matches CSS stroke-dasharray
+
+    // --- DOM Elements ---
+    const timeDisplay = document.getElementById('timeDisplay');
+    const modeDisplay = document.getElementById('modeDisplay');
+    const startBtn = document.getElementById('startBtn');
+    const progressRing = document.getElementById('progressRing');
+    const alarmSound = document.getElementById('alarmSound');
+    const tabs = document.querySelectorAll('.tab');
+
+    // --- Core Functions ---
+
+    function switchMode(mode) {
+        if(isRunning) toggleTimer(); // Stop if running
+        
+        currentMode = mode;
+        timeLeft = MODES[mode].time;
+        
+        // Update Styles
+        const theme = MODES[mode];
+        document.documentElement.style.setProperty('--primary', theme.color);
+        document.documentElement.style.setProperty('--bg', theme.bg);
+        document.documentElement.style.setProperty('--text', darkenColor(theme.color, 40)); // Darker version for text
+        
+        modeDisplay.innerText = theme.label;
+        
+        // Update Tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        // Find the button that triggered this or by index matches logic, 
+        // simplified here by assuming order or just re-rendering buttons ideally.
+        // For simplicity in vanilla JS:
+        const index = mode === 'focus' ? 0 : (mode === 'short' ? 1 : 2);
+        tabs[index].classList.add('active');
+
+        updateDisplay();
+        updateRing(1); // Full ring
+    }
+
+    function toggleTimer() {
+        if (isRunning) {
+            // Pause
+            clearInterval(timerInterval);
+            isRunning = false;
+            startBtn.innerText = "Start";
+            startBtn.style.opacity = "1";
+        } else {
+            // Start
+            isRunning = true;
+            startBtn.innerText = "Pause";
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                
+                // Calculate Progress Fraction
+                const totalTime = MODES[currentMode].time;
+                const fraction = timeLeft / totalTime;
+                updateRing(fraction);
+
+                if (timeLeft <= 0) {
+                    completeTimer();
+                }
+            }, 1000);
+        }
+    }
+
+    function resetTimer() {
+        if(isRunning) toggleTimer();
+        timeLeft = MODES[currentMode].time;
+        updateDisplay();
+        updateRing(1);
+    }
+
+    function completeTimer() {
+        clearInterval(timerInterval);
+        isRunning = false;
+        startBtn.innerText = "Start";
+        timeLeft = 0;
+        updateDisplay();
+        updateRing(0);
+        
+        // Play Sound
+        alarmSound.play();
+        
+        // Optional: Send browser notification
+        if (Notification.permission === "granted") {
+            new Notification("Time's up!", { body: `${MODES[currentMode].label} is over.` });
+        } else if (Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
+    }
+
+    // --- UI Updates ---
+
+    function updateDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timeDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        
+        // Update Tab Title
+        document.title = `${minutes}:${seconds < 10 ? '0' : ''}${seconds} - Focus Flow`;
+    }
+
+    function updateRing(fraction) {
+        // fraction goes from 1 (full) to 0 (empty)
+        // Offset = Circumference - (Fraction * Circumference)
+        // But we want it to shrink: Offset increases as fraction decreases
+        const offset = CIRCUMFERENCE - (fraction * CIRCUMFERENCE);
+        progressRing.style.strokeDashoffset = offset;
+    }
+
+    // Helper to darken color for text contrast (Simple logic)
+    // We just return a hardcoded dark variable mapping for simplicity in this version, 
+    // or rely on the CSS var --text which we update manually in switchMode if needed.
+    // Actually, let's just stick to the CSS variable update in switchMode.
+    function darkenColor(color, percent) {
+        // This is a placeholder. In the CSS variables above, we set --text manually.
+        // For this specific design, we can just leave the text color consistent 
+        // or map it specifically.
+        if(currentMode === 'focus') return '#881337'; // Dark Red
+        if(currentMode === 'short') return '#064e3b'; // Dark Green
+        if(currentMode === 'long') return '#1e3a8a';  // Dark Blue
+        return '#333';
+    }
+
+    // --- Init ---
+    switchMode('focus'); // Start in focus mode
+    
+    // Request notification permission on first click
+    document.body.addEventListener('click', () => {
+        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
+    }, { once: true });
+
+</script>
+</body>
+</html>
