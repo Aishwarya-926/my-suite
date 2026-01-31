@@ -37,5 +37,20 @@
             <p>Get work done</p>
         </a>
     </div>
+    <script>
+    // Force links to stay in PWA mode
+    if (window.navigator.standalone) {
+        document.addEventListener('click', function(e) {
+            var target = e.target;
+            while (target.nodeName !== 'A' && target.nodeName !== 'HTML') {
+                target = target.parentNode;
+            }
+            if ('href' in target && target.href.indexOf(location.host) !== -1) {
+                e.preventDefault();
+                window.location = target.href;
+            }
+        },false);
+    }
+</script>
 </body>
 </html>
